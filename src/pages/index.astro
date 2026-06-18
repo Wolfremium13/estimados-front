@@ -113,6 +113,8 @@ import Layout from '../layouts/Layout.astro';
   const joinErrorDiv = document.getElementById('join-error') as HTMLDivElement;
 
   let isOffline = false;
+  let failedAttempts = 0;
+  let checkIntervalId: any = null;
 
   // Set offline status
   function setOffline(offline: boolean) {
@@ -123,9 +125,17 @@ import Layout from '../layouts/Layout.astro';
         btnCreateRoom.disabled = true;
         btnJoinRoom.disabled = true;
       } else {
-        if (offlineBanner) offlineBanner.style.display = 'none';
+        if (offlineBanner) {
+          offlineBanner.style.display = 'none';
+          // Reset banner text and icon to defaults on reconnect
+          const bannerText = offlineBanner.querySelector('.banner-text') as HTMLSpanElement;
+          if (bannerText) bannerText.innerText = 'You are currently offline. Checking connection to the backend...';
+          const bannerIcon = offlineBanner.querySelector('.banner-icon') as HTMLSpanElement;
+          if (bannerIcon) bannerIcon.innerText = '🔌';
+        }
         btnCreateRoom.disabled = false;
         btnJoinRoom.disabled = false;
+        failedAttempts = 0;
       }
     }
   }
@@ -142,7 +152,24 @@ import Layout from '../layouts/Layout.astro';
     } catch (err: any) {
       // If we got a response back (even 404), the server is online. Network errors mean offline.
       if (err.name === 'AbortError' || err.message?.includes('Failed to fetch') || !navigator.onLine) {
+        failedAttempts++;
         setOffline(true);
+        if (failedAttempts >= 10) {
+          if (checkIntervalId) {
+            clearInterval(checkIntervalId);
+            checkIntervalId = null;
+          }
+          if (offlineBanner) {
+            const bannerText = offlineBanner.querySelector('.banner-text') as HTMLSpanElement;
+            if (bannerText) {
+              bannerText.innerText = 'Connection to the backend failed. Please try again later and refresh the page.';
+            }
+            const bannerIcon = offlineBanner.querySelector('.banner-icon') as HTMLSpanElement;
+            if (bannerIcon) {
+              bannerIcon.innerText = '⚠️';
+            }
+          }
+        }
       } else {
         setOffline(false);
       }
@@ -151,7 +178,7 @@ import Layout from '../layouts/Layout.astro';
 
   // Start checking offline status
   checkBackendOffline();
-  setInterval(checkBackendOffline, 5000);
+  checkIntervalId = setInterval(checkBackendOffline, 5000);
 
   // Parse URL query parameters
   const params = new URLSearchParams(window.location.search);
