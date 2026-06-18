@@ -118,6 +118,12 @@ export class RoomSession {
 
       this.hubConnection.onclose(() => {
         this.checkBackendOffline();
+        if (this.isModerator()) {
+          window.location.href = '/?error=Session closed or connection lost';
+        } else {
+          this.connectionState = 'Disconnected';
+          this.notify();
+        }
       });
 
       // Register SignalR listeners
@@ -217,6 +223,10 @@ export class RoomSession {
     if (this.isOffline !== offline) {
       this.isOffline = offline;
       this.notify();
+      if (offline) {
+        window.location.href = '/?error=Connection to backend was lost';
+        return;
+      }
       if (!offline && this.connectionState === 'Connected') {
         this.refreshData();
       }

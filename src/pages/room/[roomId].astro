@@ -299,6 +299,10 @@ const { roomId } = Astro.params;
       return;
     }
     if (session.connectionState === 'Disconnected') {
+      if (session.isModerator()) {
+        window.location.href = '/?error=Session closed or connection lost';
+        return;
+      }
       screenDisconnected.style.display = 'block';
       return;
     }
