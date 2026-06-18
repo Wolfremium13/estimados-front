@@ -12,7 +12,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^10.1.4",
+    "@astrojs/vercel": "^10.0.8",
     "@fontsource/lora": "^5.2.8",
     "@fontsource/red-hat-mono": "^5.2.8",
     "@microsoft/signalr": "^10.0.0",
