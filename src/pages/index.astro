@@ -1,17 +1,255 @@
 ---
-
+import Layout from '../layouts/Layout.astro';
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="es-timados - Agile Estimation">
+  <!-- General Error Alert -->
+  <div class="row justify-content-center" id="home-alert-row" style="display: none; margin-top: 2rem; margin-bottom: 1rem;">
+    <div class="col-md-10">
+      <div class="alert alert-danger text-center" id="home-alert-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 1rem; border-radius: 8px; font-weight: 500;">
+        ⚠️ <span id="home-error-message"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center" style="margin-top: 2rem;">
+    <div class="col-md-10 text-center" style="margin-bottom: 3rem;">
+      <h1 style="font-size: 3rem; background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; margin-bottom: 1rem;">
+        Relative Effort, Simplified.
+      </h1>
+      <p style="color: var(--text-gray-light); font-size: 1.2rem; max-width: 600px; margin: 0 auto;">
+        Collaborative real-time estimation for agile teams. Streamline consensus, avoid authority bias, and split
+        complex requirements instantly.
+      </p>
+    </div>
+  </div>
+
+  <div class="row justify-content-center g-4">
+    <!-- Create Room Card -->
+    <div class="col-md-5">
+      <div class="glow-card h-100 d-flex flex-column justify-content-between">
+        <div>
+          <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">
+            <span style="color: #6ab28f;">✦</span> Start New Session
+          </h3>
+          <p style="color: var(--text-gray-muted); font-size: 0.9rem; margin-bottom: 2rem;">
+            Create a new estimation room. You will enter as the Moderator with control over session stages and
+            reveal states.
+          </p>
+          
+          <div class="form-group">
+            <label class="form-label" for="modName">Your Name</label>
+            <input type="text" id="modName" class="form-control" placeholder="e.g. Carlos" />
+          </div>
+        </div>
+
+        <div id="create-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 1rem; display: none;"></div>
+
+        <button class="btn-premium w-100" id="btn-create-room">
+          <span id="btn-create-text">Create Room</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Join Room Card -->
+    <div class="col-md-5">
+      <div class="glow-card h-100 d-flex flex-column justify-content-between">
+        <div>
+          <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">
+            <span style="color: #e38d8d;">◈</span> Join Active Session
+          </h3>
+          <p style="color: var(--text-gray-muted); font-size: 0.9rem; margin-bottom: 2rem;">
+            Enter a room using a unique code provided by your Moderator. Select your role as a Developer (to
+            vote) or Product Owner.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="participantName">Your Name</label>
+            <input type="text" id="participantName" class="form-control" placeholder="e.g. Ana" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="participantRole">Role</label>
+            <select id="participantRole" class="form-select">
+              <option value="Developer">Developer (Voter)</option>
+              <option value="Product Owner">Product Owner (Observer)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="roomCode">Room Code (UUID)</label>
+            <input type="text" id="roomCode" class="form-control" placeholder="00000000-0000-0000-0000-000000000000" />
+          </div>
+        </div>
+
+        <div id="join-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 1rem; display: none;"></div>
+
+        <button class="btn-outline-premium w-100" id="btn-join-room" style="background: transparent;">
+          <span id="btn-join-text">Join Room</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const API_BASE_URL = 'http://localhost:5011';
+
+  // UI elements
+  const offlineBanner = document.getElementById('offline-banner') as HTMLDivElement;
+  const alertRow = document.getElementById('home-alert-row') as HTMLDivElement;
+  const alertErrorSpan = document.getElementById('home-error-message') as HTMLSpanElement;
+
+  const modNameInput = document.getElementById('modName') as HTMLInputElement;
+  const btnCreateRoom = document.getElementById('btn-create-room') as HTMLButtonElement;
+  const btnCreateText = document.getElementById('btn-create-text') as HTMLSpanElement;
+  const createErrorDiv = document.getElementById('create-error') as HTMLDivElement;
+
+  const partNameInput = document.getElementById('participantName') as HTMLInputElement;
+  const partRoleSelect = document.getElementById('participantRole') as HTMLSelectElement;
+  const roomCodeInput = document.getElementById('roomCode') as HTMLInputElement;
+  const btnJoinRoom = document.getElementById('btn-join-room') as HTMLButtonElement;
+  const btnJoinText = document.getElementById('btn-join-text') as HTMLSpanElement;
+  const joinErrorDiv = document.getElementById('join-error') as HTMLDivElement;
+
+  let isOffline = false;
+
+  // Set offline status
+  function setOffline(offline: boolean) {
+    if (isOffline !== offline) {
+      isOffline = offline;
+      if (offline) {
+        if (offlineBanner) offlineBanner.style.display = 'block';
+        btnCreateRoom.disabled = true;
+        btnJoinRoom.disabled = true;
+      } else {
+        if (offlineBanner) offlineBanner.style.display = 'none';
+        btnCreateRoom.disabled = false;
+        btnJoinRoom.disabled = false;
+      }
+    }
+  }
+
+  // Ping backend to check health
+  async function checkBackendOffline() {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      // Ping health endpoint
+      await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      setOffline(false);
+    } catch (err: any) {
+      // If we got a response back (even 404), the server is online. Network errors mean offline.
+      if (err.name === 'AbortError' || err.message?.includes('Failed to fetch') || !navigator.onLine) {
+        setOffline(true);
+      } else {
+        setOffline(false);
+      }
+    }
+  }
+
+  // Start checking offline status
+  checkBackendOffline();
+  setInterval(checkBackendOffline, 5000);
+
+  // Parse URL query parameters
+  const params = new URLSearchParams(window.location.search);
+  const queryRoomCode = params.get('roomCode');
+  if (queryRoomCode && roomCodeInput) {
+    roomCodeInput.value = queryRoomCode;
+  }
+
+  const queryError = params.get('error');
+  if (queryError && alertRow && alertErrorSpan) {
+    alertRow.style.display = 'flex';
+    if (queryError === 'memory_reset') {
+      alertErrorSpan.innerText = 'The server memory was reset, and the room no longer exists. Please start a new session.';
+    } else {
+      alertErrorSpan.innerText = queryError;
+    }
+  }
+
+  // Create Room action
+  btnCreateRoom.addEventListener('click', async () => {
+    const name = modNameInput.value.trim();
+    if (!name) {
+      showError(createErrorDiv, 'Name is required.');
+      return;
+    }
+    clearError(createErrorDiv);
+
+    try {
+      btnCreateRoom.disabled = true;
+      btnCreateText.innerText = 'Creating Room...';
+
+      const res = await fetch(`${API_BASE_URL}/v1/rooms?moderatorName=${encodeURIComponent(name)}`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = `/room/${data.roomId}?name=${encodeURIComponent(name)}&role=Moderator`;
+      } else {
+        showError(createErrorDiv, 'Failed to create room. Please verify details.');
+      }
+    } catch (err) {
+      showError(createErrorDiv, 'Error connecting to server.');
+      setOffline(true);
+    } finally {
+      btnCreateRoom.disabled = false;
+      btnCreateText.innerText = 'Create Room';
+    }
+  });
+
+  // Join Room action
+  btnJoinRoom.addEventListener('click', async () => {
+    const name = partNameInput.value.trim();
+    const role = partRoleSelect.value;
+    const code = roomCodeInput.value.trim();
+
+    if (!name) {
+      showError(joinErrorDiv, 'Name is required.');
+      return;
+    }
+    if (!code || !/^[0-9a-fA-F-]{36}$/.test(code)) {
+      showError(joinErrorDiv, 'Valid Room Code (UUID) is required.');
+      return;
+    }
+    clearError(joinErrorDiv);
+
+    try {
+      btnJoinRoom.disabled = true;
+      btnJoinText.innerText = 'Sending Join Request...';
+
+      const res = await fetch(`${API_BASE_URL}/v1/rooms/${code}/join-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        window.location.href = `/room/${code}?name=${encodeURIComponent(name)}&role=${role}&requestId=${data.requestId}`;
+      } else {
+        showError(joinErrorDiv, 'Failed to join. The room might be closed or does not exist.');
+      }
+    } catch (err) {
+      showError(joinErrorDiv, 'Error connecting to server.');
+      setOffline(true);
+    } finally {
+      btnJoinRoom.disabled = false;
+      btnJoinText.innerText = 'Join Room';
+    }
+  });
+
+  function showError(element: HTMLDivElement, message: string) {
+    element.innerText = `⚠️ ${message}`;
+    element.style.display = 'block';
+  }
+
+  function clearError(element: HTMLDivElement) {
+    element.innerText = '';
+    element.style.display = 'none';
+  }
+</script>

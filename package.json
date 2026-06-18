@@ -12,6 +12,16 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^6.4.7"
+    "@astrojs/node": "^10.1.4",
+    "@fontsource/lora": "^5.2.8",
+    "@fontsource/red-hat-mono": "^5.2.8",
+    "@microsoft/signalr": "^10.0.0",
+    "astro": "^6.4.7",
+    "marked": "^18.0.5"
+  },
+  "devDependencies": {
+    "@types/marked": "^5.0.2",
+    "happy-dom": "^20.10.6",
+    "vitest": "^4.1.9"
   }
 }
