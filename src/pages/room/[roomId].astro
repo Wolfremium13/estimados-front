@@ -151,7 +151,7 @@ const { roomId } = Astro.params;
   import { RoomSession } from '../../scripts/RoomSession';
   import { marked } from 'marked';
 
-  const API_BASE_URL = 'http://localhost:5011';
+  const API_BASE_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.PROD ? 'https://es-timados-production-api.azurewebsites.net' : 'http://localhost:5011');
   const roomId = (window as any).ROOM_ID;
 
   // Retrieve query options
