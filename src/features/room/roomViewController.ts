@@ -506,6 +506,8 @@ export class RoomViewController {
         triggeredDiv.appendChild(nameSpan);
         bodyDiv.appendChild(triggeredDiv);
       }
+
+      this.renderVoteDistribution(sessionData, bodyDiv);
     } else if (!sessionData.hasDiscrepancy && sessionData.consensusValue) {
       const iconSpan = document.createElement('span');
       iconSpan.style.fontSize = '3.5rem';
@@ -569,73 +571,7 @@ export class RoomViewController {
         bodyDiv.appendChild(consensusBtn);
       }
 
-      const dist = this.getVoteDistribution(sessionData);
-      const totalVotes = sessionData.votes?.length || 1;
-
-      const distCard = document.createElement('div');
-      distCard.style.maxWidth = '400px';
-      distCard.style.margin = '1.5rem auto 0 auto';
-      distCard.style.textAlign = 'left';
-      distCard.style.background = 'rgba(93, 82, 75, 0.03)';
-      distCard.style.border = '1px solid var(--border-color)';
-      distCard.style.borderRadius = '8px';
-      distCard.style.padding = '1.25rem';
-
-      const distTitle = document.createElement('h4');
-      distTitle.style.fontSize = '0.9rem';
-      distTitle.style.fontWeight = '600';
-      distTitle.style.color = 'var(--text-white)';
-      distTitle.style.marginTop = '0';
-      distTitle.style.marginBottom = '1rem';
-      distTitle.style.borderBottom = '1px solid var(--border-color)';
-      distTitle.style.paddingBottom = '0.5rem';
-      distTitle.textContent = 'Vote Distribution';
-      distCard.appendChild(distTitle);
-
-      Object.entries(dist).forEach(([card, count]) => {
-        const percentage = Math.round((count / totalVotes) * 100);
-
-        const distItem = document.createElement('div');
-        distItem.style.marginBottom = '0.75rem';
-
-        const row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.justifyContent = 'space-between';
-        row.style.fontSize = '0.85rem';
-        row.style.marginBottom = '0.25rem';
-
-        const cardSpan = document.createElement('span');
-        cardSpan.style.fontWeight = '600';
-        cardSpan.style.color = 'var(--text-white)';
-        cardSpan.textContent = `Card ${card}`;
-
-        const countSpan = document.createElement('span');
-        countSpan.style.color = 'var(--text-gray-muted)';
-        countSpan.textContent = `${count} ${count === 1 ? 'vote' : 'votes'} (${percentage}%)`;
-
-        row.appendChild(cardSpan);
-        row.appendChild(countSpan);
-
-        const progressBg = document.createElement('div');
-        progressBg.style.height = '6px';
-        progressBg.style.background = 'rgba(93, 82, 75, 0.05)';
-        progressBg.style.borderRadius = '3px';
-        progressBg.style.overflow = 'hidden';
-
-        const progressBar = document.createElement('div');
-        progressBar.style.height = '100%';
-        progressBar.style.width = `${percentage}%`;
-        progressBar.style.background = 'var(--gradient-brand)';
-        progressBar.style.borderRadius = '3px';
-
-        progressBg.appendChild(progressBar);
-
-        distItem.appendChild(row);
-        distItem.appendChild(progressBg);
-        distCard.appendChild(distItem);
-      });
-
-      bodyDiv.appendChild(distCard);
+      this.renderVoteDistribution(sessionData, bodyDiv);
     }
 
     cardDiv.appendChild(bodyDiv);
@@ -682,6 +618,76 @@ export class RoomViewController {
     }
 
     container.appendChild(cardDiv);
+  }
+
+  private renderVoteDistribution(sessionData: any, targetContainer: HTMLElement): void {
+    const dist = this.getVoteDistribution(sessionData);
+    const totalVotes = sessionData.votes?.length || 1;
+
+    const distCard = document.createElement('div');
+    distCard.style.maxWidth = '400px';
+    distCard.style.margin = '1.5rem auto 0 auto';
+    distCard.style.textAlign = 'left';
+    distCard.style.background = 'rgba(93, 82, 75, 0.03)';
+    distCard.style.border = '1px solid var(--border-color)';
+    distCard.style.borderRadius = '8px';
+    distCard.style.padding = '1.25rem';
+
+    const distTitle = document.createElement('h4');
+    distTitle.style.fontSize = '0.9rem';
+    distTitle.style.fontWeight = '600';
+    distTitle.style.color = 'var(--text-white)';
+    distTitle.style.marginTop = '0';
+    distTitle.style.marginBottom = '1rem';
+    distTitle.style.borderBottom = '1px solid var(--border-color)';
+    distTitle.style.paddingBottom = '0.5rem';
+    distTitle.textContent = 'Vote Distribution';
+    distCard.appendChild(distTitle);
+
+    Object.entries(dist).forEach(([card, count]) => {
+      const percentage = Math.round((count / totalVotes) * 100);
+
+      const distItem = document.createElement('div');
+      distItem.style.marginBottom = '0.75rem';
+
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.justifyContent = 'space-between';
+      row.style.fontSize = '0.85rem';
+      row.style.marginBottom = '0.25rem';
+
+      const cardSpan = document.createElement('span');
+      cardSpan.style.fontWeight = '600';
+      cardSpan.style.color = 'var(--text-white)';
+      cardSpan.textContent = `Card ${card}`;
+
+      const countSpan = document.createElement('span');
+      countSpan.style.color = 'var(--text-gray-muted)';
+      countSpan.textContent = `${count} ${count === 1 ? 'vote' : 'votes'} (${percentage}%)`;
+
+      row.appendChild(cardSpan);
+      row.appendChild(countSpan);
+
+      const progressBg = document.createElement('div');
+      progressBg.style.height = '6px';
+      progressBg.style.background = 'rgba(93, 82, 75, 0.05)';
+      progressBg.style.borderRadius = '3px';
+      progressBg.style.overflow = 'hidden';
+
+      const progressBar = document.createElement('div');
+      progressBar.style.height = '100%';
+      progressBar.style.width = `${percentage}%`;
+      progressBar.style.background = 'var(--gradient-brand)';
+      progressBar.style.borderRadius = '3px';
+
+      progressBg.appendChild(progressBar);
+
+      distItem.appendChild(row);
+      distItem.appendChild(progressBg);
+      distCard.appendChild(distItem);
+    });
+
+    targetContainer.appendChild(distCard);
   }
 
   private getVoteDistribution(sessionData: any): Record<string, number> {

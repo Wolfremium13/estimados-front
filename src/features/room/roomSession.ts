@@ -161,10 +161,8 @@ export class RoomSession {
           this.selectedCard = null;
           this.notify();
         },
-        onSessionHalted: (reason: string) => {
-          if (this.currentSession) {
-            this.currentSession = { ...this.currentSession, currentState: 'Halted' };
-          }
+        onSessionHalted: async (reason: string) => {
+          await this.fetchSession();
           this.notify();
         },
         onVotesRestarted: async () => {
