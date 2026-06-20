@@ -84,6 +84,19 @@ export class RoomSession {
 
   public async start(): Promise<void> {
     this.startHealthCheckTimer();
+
+    // Check if the room exists and is active before connecting
+    try {
+      const res = await this.apiFetch(`v1/rooms/${this.roomId}/participants`);
+      if (res.status === 404) {
+        window.location.href = '/?error=memory_reset';
+        return;
+      }
+    } catch (err) {
+      this.setOffline(true);
+      return;
+    }
+
     await this.connectSignalR();
     if (this.connectionState === 'Connected') {
       await this.refreshData();
@@ -278,7 +291,11 @@ export class RoomSession {
   }
 
   public async refreshData(): Promise<void> {
-    await Promise.all([this.fetchSession(), this.fetchParticipants()]);
+    if (this.isModerator()) {
+      await Promise.all([this.fetchSession(), this.fetchParticipants(), this.fetchPendingRequests()]);
+    } else {
+      await Promise.all([this.fetchSession(), this.fetchParticipants()]);
+    }
   }
 
   public async fetchSession(): Promise<void> {
@@ -340,6 +357,25 @@ export class RoomSession {
       }
     } catch (err) {
       console.error('Error fetching participants:', err);
+    }
+  }
+
+  public async fetchPendingRequests(): Promise<void> {
+    if (!this.isModerator()) return;
+    try {
+      const res = await this.apiFetch(`v1/rooms/${this.roomId}/join-requests`);
+      if (res.status === 404) {
+        window.location.href = '/?error=memory_reset';
+        return;
+      }
+      if (res.ok) {
+        const requests = await res.json() as PendingRequestModel[];
+        if (Array.isArray(requests)) {
+          this.pendingRequests = requests;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching pending requests:', err);
     }
   }
 
