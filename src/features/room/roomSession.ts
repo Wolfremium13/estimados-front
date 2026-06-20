@@ -67,6 +67,21 @@ export class RoomSession {
         window.location.href = '/?error=memory_reset';
         return;
       }
+      if (Array.isArray(res)) {
+        this.roomParticipants = res;
+        res.forEach((p) => {
+          if (!this.participantOnlineStatus.has(p.name)) {
+            this.participantOnlineStatus.set(p.name, true);
+          }
+        });
+
+        if (!this.isModerator() && this.connectionState === 'WaitingForApproval') {
+          const approved = res.some((p) => p.name.toLowerCase() === this.participantName.toLowerCase());
+          if (approved) {
+            this.connectionState = 'Connected';
+          }
+        }
+      }
     } catch (err) {
       this.setOffline(true);
       return;

@@ -87,6 +87,20 @@ describe('RoomSession Coordinator', () => {
     expect(session.connectionState).toBe('WaitingForApproval');
   });
 
+  it('should transition connectionState to Connected on start if developer is already approved in participants list', async () => {
+    const session = new RoomSession(apiBaseUrl, roomId, 'Ana', 'Developer', 'req-123');
+    expect(session.connectionState).toBe('WaitingForApproval');
+
+    mockFetchParticipants.mockResolvedValueOnce([
+      { name: 'Carlos', role: 'Moderator' },
+      { name: 'Ana', role: 'Developer' }
+    ]);
+
+    await session.start();
+
+    expect(session.connectionState).toBe('Connected');
+  });
+
   it('should notify subscribers when isOffline state changes', async () => {
     const session = new RoomSession(apiBaseUrl, roomId, 'Carlos', 'Moderator');
     let notified = false;
