@@ -394,10 +394,7 @@ export class RoomViewController {
       infoDiv.appendChild(roleDiv);
 
       const actionsDiv = document.createElement('div');
-      actionsDiv.style.display = 'flex';
-      actionsDiv.style.gap = '0.5rem';
-      actionsDiv.style.flexWrap = 'wrap';
-      actionsDiv.style.justifyContent = 'flex-end';
+      actionsDiv.className = 'pending-request-actions';
 
       const approveBtn = document.createElement('button');
       approveBtn.className = 'btn btn-sm';
