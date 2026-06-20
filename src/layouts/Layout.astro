@@ -371,6 +371,7 @@ const { title } = Astro.props;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 0.75rem;
         padding: 0.75rem 1.25rem;
         background: var(--bg-dark-charcoal);
         border: 1px solid var(--border-color);
@@ -378,6 +379,38 @@ const { title } = Astro.props;
         margin-bottom: 0.75rem;
         font-family: var(--font-mono);
         font-size: 0.9rem;
+        transition: var(--transition-smooth);
+      }
+
+      .participant-name-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      @media (max-width: 1200px) {
+        .participant-name-text {
+          max-width: 100px;
+        }
+      }
+
+      @media (max-width: 991px) {
+        .waiting-participant {
+          flex-wrap: wrap;
+          border-radius: 16px;
+          padding: 0.75rem 1rem;
+        }
+        .waiting-participant > :first-child {
+          flex: 1 1 50%;
+          min-width: 140px;
+        }
+        .waiting-participant > :last-child {
+          flex: 0 0 auto;
+          text-align: right;
+        }
       }
 
       /* State & Step Indicators */

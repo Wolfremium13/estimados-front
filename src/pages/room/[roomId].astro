@@ -435,7 +435,7 @@ const { roomId } = Astro.params;
           <div>
             <div style="font-weight: 600; display: flex; align-items: center; gap: 6px;">
               <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor}; display: inline-block;" title="${isOnline ? 'Online' : 'Offline'}"></span>
-              <span style="${nameStyle}">${p.name}</span>
+              <span style="${nameStyle}" class="participant-name-text">${p.name}</span>
               ${offlineLabel}
             </div>
             <div style="font-size: 0.75rem; color: var(--text-gray-muted);">${p.role}</div>
@@ -467,10 +467,10 @@ const { roomId } = Astro.params;
       html += `
         <div class="waiting-participant">
           <div>
-            <div style="font-weight: 600; color: var(--text-white);">${req.name}</div>
+            <div style="font-weight: 600; color: var(--text-white);" class="participant-name-text">${req.name}</div>
             <div style="font-size: 0.75rem; color: var(--text-gray-muted);">Requested: ${req.role}</div>
           </div>
-          <div style="display: flex; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;">
             <button class="btn btn-sm btn-approve-req" data-req-id="${req.requestId}" style="background: var(--text-white); color: var(--bg-dark-obsidian); font-family: var(--font-mono); border: 1px solid var(--text-white); padding: 4px 14px; font-size: 0.75rem; font-weight: 600; border-radius: 20px;">Approve</button>
             <button class="btn btn-sm btn-reject-req" data-req-id="${req.requestId}" style="background: transparent; color: #ef6f6f; font-family: var(--font-mono); border: 1px solid #ef6f6f; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border-radius: 20px;">Reject</button>
           </div>
