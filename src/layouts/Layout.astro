@@ -391,6 +391,13 @@ const { title } = Astro.props;
         vertical-align: middle;
       }
 
+      .participant-observer-text .obs-short {
+        display: none;
+      }
+      .participant-observer-text .obs-full {
+        display: inline;
+      }
+
       @media (max-width: 1200px) {
         .participant-name-text {
           max-width: 100px;
@@ -410,6 +417,12 @@ const { title } = Astro.props;
         .waiting-participant > :last-child {
           flex: 0 0 auto;
           text-align: right;
+        }
+        .participant-observer-text .obs-full {
+          display: none;
+        }
+        .participant-observer-text .obs-short {
+          display: inline;
         }
       }
 

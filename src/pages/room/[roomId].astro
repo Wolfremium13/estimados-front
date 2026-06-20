@@ -427,7 +427,7 @@ const { roomId } = Astro.params;
           voteHtml = `<span style="color: var(--text-gray-muted);">Waiting...</span>`;
         }
       } else {
-        voteHtml = `<span style="color: var(--text-gray-muted); font-style: italic;">Observer</span>`;
+        voteHtml = `<span class="participant-observer-text" style="color: var(--text-gray-muted); font-style: italic;"><span class="obs-full">Observer</span><span class="obs-short">Obs.</span></span>`;
       }
 
       html += `
