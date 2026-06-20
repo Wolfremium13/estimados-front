@@ -93,6 +93,8 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script>
+  import { RoomApiService } from '../features/room/services/roomApiService';
+
   const API_BASE_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.PROD ? 'https://es-timados-production-api.azurewebsites.net' : 'http://localhost:5011');
 
   // UI elements
@@ -140,38 +142,38 @@ import Layout from '../layouts/Layout.astro';
     }
   }
 
+  // Initialize RoomApiService
+  const apiService = new RoomApiService(API_BASE_URL, (offline) => setOffline(offline));
+
   // Ping backend to check health
   async function checkBackendOffline() {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      // Ping health endpoint
-      await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      setOffline(false);
+      const isHealthy = await apiService.checkHealth();
+      if (!isHealthy) {
+        handleOfflineFailure();
+      }
     } catch (err: any) {
-      // If we got a response back (even 404), the server is online. Network errors mean offline.
-      if (err.name === 'AbortError' || err.message?.includes('Failed to fetch') || !navigator.onLine) {
-        failedAttempts++;
-        setOffline(true);
-        if (failedAttempts >= 10) {
-          if (checkIntervalId) {
-            clearInterval(checkIntervalId);
-            checkIntervalId = null;
-          }
-          if (offlineBanner) {
-            const bannerText = offlineBanner.querySelector('.banner-text') as HTMLSpanElement;
-            if (bannerText) {
-              bannerText.innerText = 'Connection to the backend failed. Please try again later and refresh the page.';
-            }
-            const bannerIcon = offlineBanner.querySelector('.banner-icon') as HTMLSpanElement;
-            if (bannerIcon) {
-              bannerIcon.innerText = '⚠️';
-            }
-          }
+      handleOfflineFailure();
+    }
+  }
+
+  function handleOfflineFailure() {
+    failedAttempts++;
+    setOffline(true);
+    if (failedAttempts >= 10) {
+      if (checkIntervalId) {
+        clearInterval(checkIntervalId);
+        checkIntervalId = null;
+      }
+      if (offlineBanner) {
+        const bannerText = offlineBanner.querySelector('.banner-text') as HTMLSpanElement;
+        if (bannerText) {
+          bannerText.innerText = 'Connection to the backend failed. Please try again later and refresh the page.';
         }
-      } else {
-        setOffline(false);
+        const bannerIcon = offlineBanner.querySelector('.banner-icon') as HTMLSpanElement;
+        if (bannerIcon) {
+          bannerIcon.innerText = '⚠️';
+        }
       }
     }
   }
@@ -210,12 +212,9 @@ import Layout from '../layouts/Layout.astro';
       btnCreateRoom.disabled = true;
       btnCreateText.innerText = 'Creating Room...';
 
-      const res = await fetch(`${API_BASE_URL}/v1/rooms?moderatorName=${encodeURIComponent(name)}`, {
-        method: 'POST',
-      });
+      const data = await apiService.createRoom(name);
 
-      if (res.ok) {
-        const data = await res.json();
+      if (data) {
         window.location.href = `/room/${data.roomId}?name=${encodeURIComponent(name)}&role=Moderator`;
       } else {
         showError(createErrorDiv, 'Failed to create room. Please verify details.');
@@ -249,14 +248,9 @@ import Layout from '../layouts/Layout.astro';
       btnJoinRoom.disabled = true;
       btnJoinText.innerText = 'Sending Join Request...';
 
-      const res = await fetch(`${API_BASE_URL}/v1/rooms/${code}/join-requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, role }),
-      });
+      const data = await apiService.joinRoom(code, name, role);
 
-      if (res.ok) {
-        const data = await res.json();
+      if (data) {
         window.location.href = `/room/${code}?name=${encodeURIComponent(name)}&role=${role}&requestId=${data.requestId}`;
       } else {
         showError(joinErrorDiv, 'Failed to join. The room might be closed or does not exist.');

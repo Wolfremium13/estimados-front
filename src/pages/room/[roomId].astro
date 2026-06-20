@@ -1,9 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import EstimationDeck from '../../components/EstimationDeck.astro';
-import ParticipantList from '../../components/ParticipantList.astro';
-import PendingRequestsList from '../../components/PendingRequestsList.astro';
-import RevealResults from '../../components/RevealResults.astro';
+import EstimationDeck from '../../features/room/components/EstimationDeck.astro';
+import ParticipantList from '../../features/room/components/ParticipantList.astro';
+import PendingRequestsList from '../../features/room/components/PendingRequestsList.astro';
+import RevealResults from '../../features/room/components/RevealResults.astro';
 
 const { roomId } = Astro.params;
 ---
@@ -148,7 +148,7 @@ const { roomId } = Astro.params;
 </script>
 
 <script>
-  import { RoomSession } from '../../scripts/RoomSession';
+  import { RoomSession } from '../../features/room/roomSession';
   import { marked } from 'marked';
 
   const API_BASE_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.PROD ? 'https://es-timados-production-api.azurewebsites.net' : 'http://localhost:5011');
