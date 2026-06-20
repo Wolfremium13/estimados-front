@@ -149,7 +149,7 @@ const { roomId } = Astro.params;
 
 <script>
   import { RoomSession } from '../../features/room/roomSession';
-  import { marked } from 'marked';
+  import { RoomViewController } from '../../features/room/roomViewController';
 
   const API_BASE_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.PROD ? 'https://es-timados-production-api.azurewebsites.net' : 'http://localhost:5011');
   const roomId = (window as any).ROOM_ID;
@@ -164,44 +164,42 @@ const { roomId } = Astro.params;
     window.location.href = `/?roomCode=${roomId}`;
   }
 
-  // Screens
-  const screenConnecting = document.getElementById('screen-connecting') as HTMLDivElement;
-  const screenWaiting = document.getElementById('screen-waiting') as HTMLDivElement;
-  const screenRejected = document.getElementById('screen-rejected') as HTMLDivElement;
-  const screenDisconnected = document.getElementById('screen-disconnected') as HTMLDivElement;
-  const screenConnected = document.getElementById('screen-connected') as HTMLDivElement;
-
-  // Header Details
-  const roomCodeBadgeText = document.getElementById('room-code-badge-text') as HTMLSpanElement;
-  const btnCopyCode = document.getElementById('btn-copy-code') as HTMLButtonElement;
-  const userStoryDescription = document.getElementById('user-story-description') as HTMLDivElement;
-  const votingStateBadge = document.getElementById('voting-state-badge') as HTMLSpanElement;
-
-  // Moderator UI
-  const moderatorPanel = document.getElementById('moderator-panel') as HTMLDivElement;
-  const modStorySetup = document.getElementById('mod-story-setup') as HTMLDivElement;
-  const modSessionControls = document.getElementById('mod-session-controls') as HTMLDivElement;
-  const storyDescTextarea = document.getElementById('storyDesc') as HTMLTextAreaElement;
-  const btnStartSession = document.getElementById('btn-start-session') as HTMLButtonElement;
-  
-  const btnTransitionPrivate = document.getElementById('btn-transition-private') as HTMLButtonElement;
-  const btnRevealVotes = document.getElementById('btn-reveal-votes') as HTMLButtonElement;
-  const btnRestartVotes = document.getElementById('btn-restart-votes') as HTMLButtonElement;
-  const btnCloseSession = document.getElementById('btn-close-session') as HTMLButtonElement;
-
-  // Estimation Deck UI
-  const deckPanel = document.getElementById('deck-panel') as HTMLDivElement;
-  const deckCards = document.querySelectorAll('#estimation-deck-grid .estimados-card') as NodeListOf<HTMLDivElement>;
-
-  // Offline Banner UI
-  const offlineBanner = document.getElementById('offline-banner') as HTMLDivElement;
+  // Setup DOM Elements references
+  const elements = {
+    screenConnecting: document.getElementById('screen-connecting') as HTMLDivElement,
+    screenWaiting: document.getElementById('screen-waiting') as HTMLDivElement,
+    screenRejected: document.getElementById('screen-rejected') as HTMLDivElement,
+    screenDisconnected: document.getElementById('screen-disconnected') as HTMLDivElement,
+    screenConnected: document.getElementById('screen-connected') as HTMLDivElement,
+    roomCodeBadgeText: document.getElementById('room-code-badge-text') as HTMLSpanElement,
+    btnCopyCode: document.getElementById('btn-copy-code') as HTMLButtonElement,
+    userStoryDescription: document.getElementById('user-story-description') as HTMLDivElement,
+    votingStateBadge: document.getElementById('voting-state-badge') as HTMLSpanElement,
+    moderatorPanel: document.getElementById('moderator-panel') as HTMLDivElement,
+    modStorySetup: document.getElementById('mod-story-setup') as HTMLDivElement,
+    modSessionControls: document.getElementById('mod-session-controls') as HTMLDivElement,
+    storyDescTextarea: document.getElementById('storyDesc') as HTMLTextAreaElement,
+    btnStartSession: document.getElementById('btn-start-session') as HTMLButtonElement,
+    btnTransitionPrivate: document.getElementById('btn-transition-private') as HTMLButtonElement,
+    btnRevealVotes: document.getElementById('btn-reveal-votes') as HTMLButtonElement,
+    btnRestartVotes: document.getElementById('btn-restart-votes') as HTMLButtonElement,
+    btnCloseSession: document.getElementById('btn-close-session') as HTMLButtonElement,
+    deckPanel: document.getElementById('deck-panel') as HTMLDivElement,
+    deckCards: document.querySelectorAll('#estimation-deck-grid .estimados-card') as NodeListOf<HTMLDivElement>,
+    offlineBanner: document.getElementById('offline-banner') as HTMLDivElement,
+    participantListItems: document.getElementById('participant-list-items') as HTMLDivElement,
+    pendingRequestsCard: document.getElementById('pending-requests-card') as HTMLDivElement,
+    pendingRequestsItems: document.getElementById('pending-requests-items') as HTMLDivElement,
+    pendingRequestsTitle: document.getElementById('pending-requests-title') as HTMLHeadingElement,
+    revealResultsContainer: document.getElementById('reveal-results-container') as HTMLDivElement,
+  };
 
   // Init session controller
   const session = new RoomSession(API_BASE_URL, roomId, name, role, requestId);
 
   // Setup UI elements on startup
-  if (roomCodeBadgeText) {
-    roomCodeBadgeText.innerText = roomId.substring(0, 8) + '...';
+  if (elements.roomCodeBadgeText) {
+    elements.roomCodeBadgeText.innerText = roomId.substring(0, 8) + '...';
   }
 
   // Re-run setup values for waiting approval text
@@ -210,450 +208,11 @@ const { roomId } = Astro.params;
   if (waitingPartName) waitingPartName.innerText = name;
   if (waitingPartRole) waitingPartRole.innerText = role;
 
-  // Setup Card Clicks
-  deckCards.forEach((card) => {
-    card.addEventListener('click', () => {
-      const cardValue = card.getAttribute('data-card');
-      if (cardValue) {
-        session.castVote(cardValue);
-      }
-    });
+  // Initialize View Controller
+  const viewController = new RoomViewController(elements, session);
+
+  // Initialize and update
+  session.start().then(() => {
+    viewController.updateUI();
   });
-
-  // Setup Button Clicks
-  btnCopyCode?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(roomId);
-      btnCopyCode.innerText = 'Copied!';
-      setTimeout(() => {
-        btnCopyCode.innerText = 'Copy Code';
-      }, 2000);
-    } catch (err) {
-      console.error('Copy failed:', err);
-    }
-  });
-
-  btnStartSession?.addEventListener('click', () => {
-    const desc = storyDescTextarea.value.trim();
-    if (desc) {
-      session.startSession(desc);
-      storyDescTextarea.value = '';
-    }
-  });
-
-  btnTransitionPrivate?.addEventListener('click', () => {
-    session.transitionToPrivate();
-  });
-
-  btnRevealVotes?.addEventListener('click', () => {
-    session.revealVotes();
-  });
-
-  btnRestartVotes?.addEventListener('click', () => {
-    session.restartVotes();
-  });
-
-  btnCloseSession?.addEventListener('click', () => {
-    session.closeSession();
-  });
-
-  document.querySelectorAll('.btn-go-home').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      window.location.href = '/';
-    });
-  });
-
-  // Watch for state changes
-  session.subscribe(() => {
-    updateUI();
-  });
-
-  // Initialize
-  session.start();
-
-  // Primary rendering sync loop
-  function updateUI() {
-    // 1. Sync Offline Banner
-    if (offlineBanner) {
-      offlineBanner.style.display = session.isOffline ? 'block' : 'none';
-    }
-
-    // 2. Hide all screens first
-    screenConnecting.style.display = 'none';
-    screenWaiting.style.display = 'none';
-    screenRejected.style.display = 'none';
-    screenDisconnected.style.display = 'none';
-    screenConnected.style.display = 'none';
-
-    // 3. Show correct screen
-    if (session.connectionState === 'Connecting') {
-      screenConnecting.style.display = 'block';
-      return;
-    }
-    if (session.connectionState === 'WaitingForApproval') {
-      screenWaiting.style.display = 'block';
-      return;
-    }
-    if (session.connectionState === 'Rejected') {
-      screenRejected.style.display = 'block';
-      return;
-    }
-    if (session.connectionState === 'Disconnected') {
-      if (session.isModerator()) {
-        window.location.href = '/?error=Session closed or connection lost';
-        return;
-      }
-      screenDisconnected.style.display = 'block';
-      return;
-    }
-
-    // Connected state UI sync
-    screenConnected.style.display = 'flex';
-
-    // Sync state badge
-    if (votingStateBadge) {
-      const state = session.currentSession?.currentState ?? 'Not Started';
-      votingStateBadge.innerText = `Voting State: ${state}`;
-      if (state === 'PrivateEstimation') {
-        votingStateBadge.classList.remove('inactive');
-      } else {
-        votingStateBadge.classList.add('inactive');
-      }
-    }
-
-    // Render User Story Description
-    if (userStoryDescription) {
-      if (session.currentSession?.storyDescription) {
-        userStoryDescription.innerHTML = marked.parse(session.currentSession.storyDescription);
-      } else {
-        userStoryDescription.innerHTML = `<h2 style="margin: 0; font-size: 1.5rem;">Waiting for story...</h2>`;
-      }
-    }
-
-    // Sync Moderator Controls
-    if (session.isModerator()) {
-      moderatorPanel.style.display = 'block';
-      if (!session.currentSession) {
-        modStorySetup.style.display = 'block';
-        modSessionControls.style.display = 'none';
-      } else {
-        modStorySetup.style.display = 'none';
-        modSessionControls.style.display = 'flex';
-
-        // Show transition buttons based on current stage
-        const state = session.currentSession.currentState;
-        btnTransitionPrivate.style.display = state === 'StoryPresentation' ? 'block' : 'none';
-        
-        // Reveal Votes button
-        if (state === 'PrivateEstimation') {
-          btnRevealVotes.style.display = 'block';
-          // Check if all developers voted to enable/disable button
-          const developers = session.roomParticipants.filter(p => p.role.toLowerCase() === 'developer');
-          const allVoted = developers.length > 0 && developers.every(dev => session.votedParticipants.has(dev.name));
-          btnRevealVotes.disabled = !allVoted;
-        } else {
-          btnRevealVotes.style.display = 'none';
-        }
-
-        // Restart & New Story buttons
-        const showEndedControls = ['SimultaneousReveal', 'ConsensusManagement', 'Halted'].includes(state);
-        btnRestartVotes.style.display = showEndedControls ? 'block' : 'none';
-        btnCloseSession.style.display = showEndedControls ? 'block' : 'none';
-      }
-    } else {
-      moderatorPanel.style.display = 'none';
-    }
-
-    // Sync Deck (Visible to Developer in PrivateEstimation state)
-    const isVoter = role === 'Developer';
-    const isVotingOngoing = session.currentSession?.currentState === 'PrivateEstimation';
-    if (isVoter && isVotingOngoing) {
-      deckPanel.style.display = 'block';
-      // Sync selected card highlight
-      deckCards.forEach((card) => {
-        const val = card.getAttribute('data-card');
-        if (session.selectedCard === val) {
-          card.classList.add('active-selected');
-        } else {
-          card.classList.remove('active-selected');
-        }
-      });
-    } else {
-      deckPanel.style.display = 'none';
-    }
-
-    // Render Participant List
-    renderParticipants();
-
-    // Render Join Requests (Moderator only)
-    renderJoinRequests();
-
-    // Render Reveal Results
-    renderResults();
-  }
-
-  function renderParticipants() {
-    const listContainer = document.getElementById('participant-list-items');
-    if (!listContainer) return;
-
-    if (session.roomParticipants.length === 0) {
-      listContainer.innerHTML = `<p style="color: var(--text-gray-muted); font-style: italic; margin: 0; text-align: center;">No participants in the room yet.</p>`;
-      return;
-    }
-
-    let html = '';
-    session.roomParticipants.forEach((p) => {
-      const isOnline = session.participantOnlineStatus.get(p.name) !== false;
-      const statusColor = isOnline ? '#6ab28f' : '#ef6f6f';
-      const nameStyle = isOnline ? 'color: var(--text-white);' : 'color: var(--text-gray-muted); text-decoration: line-through;';
-      const offlineLabel = isOnline ? '' : `<span style="font-size: 0.75rem; color: #ef6f6f; font-weight: normal; margin-left: 2px;">(Offline)</span>`;
-
-      // Vote status rendering
-      let voteHtml = '';
-      if (p.role === 'Developer') {
-        if (session.currentSession) {
-          const vote = session.currentSession.votes?.find(v => v.name.toLowerCase() === p.name.toLowerCase());
-          const state = session.currentSession.currentState;
-          if (['SimultaneousReveal', 'ConsensusManagement', 'Halted'].includes(state)) {
-            voteHtml = `<span style="font-family: var(--font-mono); font-weight: 700; color: #6ab28f;">${vote?.card || 'Idle'}</span>`;
-          } else {
-            if (vote?.card || session.votedParticipants.has(p.name)) {
-              voteHtml = `<span style="color: #6ab28f;">✓ Voted</span>`;
-            } else {
-              voteHtml = `<span style="color: var(--text-gray-muted);">Thinking...</span>`;
-            }
-          }
-        } else {
-          voteHtml = `<span style="color: var(--text-gray-muted);">Waiting...</span>`;
-        }
-      } else {
-        voteHtml = `<span class="participant-observer-text" style="color: var(--text-gray-muted); font-style: italic;"><span class="obs-full">Observer</span><span class="obs-short">Obs.</span></span>`;
-      }
-
-      html += `
-        <div class="waiting-participant" style="margin-bottom: 0;">
-          <div>
-            <div style="font-weight: 600; display: flex; align-items: center; gap: 6px;">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${statusColor}; display: inline-block;" title="${isOnline ? 'Online' : 'Offline'}"></span>
-              <span style="${nameStyle}" class="participant-name-text">${p.name}</span>
-              ${offlineLabel}
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text-gray-muted);">${p.role}</div>
-          </div>
-          <div>${voteHtml}</div>
-        </div>
-      `;
-    });
-
-    listContainer.innerHTML = html;
-  }
-
-  function renderJoinRequests() {
-    const card = document.getElementById('pending-requests-card');
-    const container = document.getElementById('pending-requests-items');
-    const title = document.getElementById('pending-requests-title');
-    if (!card || !container || !title) return;
-
-    if (!session.isModerator() || session.pendingRequests.length === 0) {
-      card.style.display = 'none';
-      return;
-    }
-
-    card.style.display = 'block';
-    title.innerText = `Pending Requests (${session.pendingRequests.length})`;
-
-    let html = '';
-    session.pendingRequests.forEach((req) => {
-      html += `
-        <div class="waiting-participant">
-          <div>
-            <div style="font-weight: 600; color: var(--text-white);" class="participant-name-text">${req.name}</div>
-            <div style="font-size: 0.75rem; color: var(--text-gray-muted);">Requested: ${req.role}</div>
-          </div>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end;">
-            <button class="btn btn-sm btn-approve-req" data-req-id="${req.requestId}" style="background: var(--text-white); color: var(--bg-dark-obsidian); font-family: var(--font-mono); border: 1px solid var(--text-white); padding: 4px 14px; font-size: 0.75rem; font-weight: 600; border-radius: 20px;">Approve</button>
-            <button class="btn btn-sm btn-reject-req" data-req-id="${req.requestId}" style="background: transparent; color: #ef6f6f; font-family: var(--font-mono); border: 1px solid #ef6f6f; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border-radius: 20px;">Reject</button>
-          </div>
-        </div>
-      `;
-    });
-
-    container.innerHTML = html;
-
-    // Attach click listeners to approve/reject buttons
-    container.querySelectorAll('.btn-approve-req').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-req-id');
-        if (id) session.approveRequest(id);
-      });
-    });
-    container.querySelectorAll('.btn-reject-req').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-req-id');
-        if (id) session.rejectRequest(id);
-      });
-    });
-  }
-
-  function renderResults() {
-    const container = document.getElementById('reveal-results-container');
-    if (!container) return;
-
-    const sessionData = session.currentSession;
-    if (!sessionData || !['SimultaneousReveal', 'ConsensusManagement', 'Halted'].includes(sessionData.currentState)) {
-      container.style.display = 'none';
-      return;
-    }
-
-    container.style.display = 'block';
-
-    const borderClr = sessionData.currentState === 'Halted' ? '#ef6f6f' : (sessionData.hasDiscrepancy ? '#e2a54a' : '#6ab28f');
-
-    let bodyHtml = '';
-
-    if (sessionData.currentState === 'Halted') {
-      const axeLaunchers = sessionData.votes
-        ?.filter(v => v.card?.toLowerCase() === 'axe')
-        .map(v => v.name) || [];
-
-      const triggeredByHtml = axeLaunchers.length > 0
-        ? `<div style="margin-top: 1.5rem; padding: 0.75rem 1.25rem; background: rgba(239, 111, 111, 0.05); border: 1px solid rgba(239, 111, 111, 0.15); border-radius: 8px; display: inline-block;">
-             <span style="color: #ef6f6f; font-weight: 600; font-size: 0.95rem;">🪓 Triggered by: </span>
-             <span style="color: var(--text-white); font-weight: 700; font-size: 0.95rem;">${triggeredByHtmlEscape(axeLaunchers.join(', '))}</span>
-           </div>`
-        : '';
-
-      bodyHtml = `
-        <div style="text-align: center; padding: 1rem 0;">
-          <span style="font-size: 3.5rem; display: block; margin-bottom: 1rem;">🪓</span>
-          <h3 style="color: #ef6f6f; margin-bottom: 0.5rem;">Estimation Halted (Limit of 8 Exceeded)</h3>
-          <p style="color: var(--text-gray-light); max-width: 500px; margin: 0 auto; margin-bottom: 1rem;">
-            The Axe protocol has been triggered. This story is too complex or ambiguous. It must be split into smaller tasks before proceeding.
-          </p>
-          ${triggeredByHtml}
-        </div>
-      `;
-    } else if (!sessionData.hasDiscrepancy && sessionData.consensusValue) {
-      bodyHtml = `
-        <div style="text-align: center; padding: 1rem 0;">
-          <span style="font-size: 3.5rem; display: block; margin-bottom: 1.5rem; background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">
-            ${triggeredByHtmlEscape(sessionData.consensusValue)}
-          </span>
-          <h3 style="color: #6ab28f; margin-bottom: 0.5rem;">Consensus Reached!</h3>
-          <p style="color: var(--text-gray-light);">
-            The team has agreed on an effort score of <strong>${triggeredByHtmlEscape(sessionData.consensusValue)}</strong> points.
-          </p>
-        </div>
-      `;
-    } else {
-      // Discrepancy Detected
-      const modConsensusBtn = session.isModerator()
-        ? `<button class="btn-premium" id="btn-transition-consensus" style="margin-top: 0.5rem;">Move to Consensus Management</button>`
-        : '';
-
-      // Vote distribution
-      const dist = getVoteDistribution(sessionData);
-      let distHtml = '';
-      const totalVotes = sessionData.votes?.length || 1;
-
-      Object.entries(dist).forEach(([card, count]) => {
-        const percentage = Math.round((count / totalVotes) * 100);
-        distHtml += `
-          <div style="margin-bottom: 0.75rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
-              <span style="font-weight: 600; color: var(--text-white);">Card ${triggeredByHtmlEscape(card)}</span>
-              <span style="color: var(--text-gray-muted);">${count} ${count === 1 ? 'vote' : 'votes'} (${percentage}%)</span>
-            </div>
-            <div style="height: 6px; background: rgba(93, 82, 75, 0.05); border-radius: 3px; overflow: hidden;">
-              <div style="height: 100%; width: ${percentage}%; background: var(--gradient-brand); border-radius: 3px;"></div>
-            </div>
-          </div>
-        `;
-      });
-
-      bodyHtml = `
-        <div style="text-align: center; padding: 1rem 0;">
-          <span style="font-size: 3.5rem; display: block; margin-bottom: 1rem;">⚖️</span>
-          <h3 style="color: #e2a54a; margin-bottom: 0.5rem;">Discrepancy Detected</h3>
-          <p style="color: var(--text-gray-light); max-width: 500px; margin: 0 auto; margin-bottom: 1rem;">
-            The votes do not match. The lowest and highest voters should explain their technical reasoning.
-          </p>
-          ${modConsensusBtn}
-          
-          <div style="max-width: 400px; margin: 1.5rem auto 0 auto; text-align: left; background: rgba(93, 82, 75, 0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">
-            <h4 style="font-size: 0.9rem; font-weight: 600; color: var(--text-white); margin-top: 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-              Vote Distribution
-            </h4>
-            ${distHtml}
-          </div>
-        </div>
-      `;
-    }
-
-    // Flagged special cards recommendations
-    let flaggedHtml = '';
-    if (sessionData.flaggedSpecialCards && sessionData.flaggedSpecialCards.length > 0) {
-      let badgesHtml = '';
-      sessionData.flaggedSpecialCards.forEach((sc) => {
-        let label = sc;
-        if (sc === 'Diagram') label = '🎨 Sketch Architecture (Diagram)';
-        else if (sc === 'AI') label = '🤖 Candidates for AI Automation';
-        else if (sc === 'Coffee Cup') label = '☕ Take a coffee break';
-        else if (sc === 'Axe') label = '🪓 Axe Protocol (Too complex)';
-
-        badgesHtml += `
-          <span style="background: rgba(93, 82, 75, 0.05); color: var(--text-white); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
-            ${label}
-          </span>
-        `;
-      });
-
-      flaggedHtml = `
-        <div style="margin-top: 2rem; border-top: 1px dashed var(--border-color); padding-top: 1.5rem;">
-          <h4 style="font-size: 1rem; margin-bottom: 0.75rem; text-transform: uppercase; color: var(--text-gray-muted); letter-spacing: 0.05em;">
-            Flagged Actions:
-          </h4>
-          <div class="d-flex gap-2 flex-wrap">
-            ${badgesHtml}
-          </div>
-        </div>
-      `;
-    }
-
-    container.innerHTML = `
-      <div class="glow-card" style="border-color: ${borderClr};">
-        ${bodyHtml}
-        ${flaggedHtml}
-      </div>
-    `;
-
-    // Attach click listener for consensus button if present
-    const btnTransitionConsensus = document.getElementById('btn-transition-consensus');
-    btnTransitionConsensus?.addEventListener('click', () => {
-      session.transitionToConsensus();
-    });
-  }
-
-  function getVoteDistribution(sessionData: any) {
-    const dist: Record<string, number> = {};
-    if (!sessionData.votes) return dist;
-    sessionData.votes.forEach((v: any) => {
-      if (v.card) {
-        dist[v.card] = (dist[v.card] || 0) + 1;
-      }
-    });
-    // Sort descending
-    return Object.fromEntries(
-      Object.entries(dist).sort((a, b) => b[1] - a[1])
-    );
-  }
-
-  function triggeredByHtmlEscape(str: string) {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
 </script>
