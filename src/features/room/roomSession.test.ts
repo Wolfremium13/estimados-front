@@ -137,4 +137,26 @@ describe('RoomSession Coordinator', () => {
 
     expect(session.isOffline).toBe(false);
   });
+
+  it('should redirect moderator to home page with error message when joinRoomAsModerator fails because moderator already connected', async () => {
+    const session = new RoomSession(apiBaseUrl, roomId, 'Carlos', 'Moderator');
+    mockJoinRoomAsModerator.mockRejectedValueOnce(
+      new Error("An unexpected error occurred invoking 'JoinRoomAsModerator' on the server. HubException: A moderator is already connected to this room.")
+    );
+
+    await session.start();
+
+    expect(session.isRedirecting).toBe(true);
+    expect(window.location.href).toBe(`/?error=${encodeURIComponent('A moderator is already connected to this room')}`);
+  });
+
+  it('should redirect moderator to home page with error message when joinRoomAsModerator fails with any other error', async () => {
+    const session = new RoomSession(apiBaseUrl, roomId, 'Carlos', 'Moderator');
+    mockJoinRoomAsModerator.mockRejectedValueOnce(new Error('Some general connection error'));
+
+    await session.start();
+
+    expect(session.isRedirecting).toBe(true);
+    expect(window.location.href).toBe(`/?error=${encodeURIComponent('Some general connection error')}`);
+  });
 });

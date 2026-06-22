@@ -123,6 +123,15 @@ export class RoomViewController {
   }
 
   public updateUI(): void {
+    if (this.session.isRedirecting) {
+      this.elements.screenConnecting.style.display = 'block';
+      this.elements.screenConnected.style.display = 'none';
+      this.elements.screenWaiting.style.display = 'none';
+      this.elements.screenRejected.style.display = 'none';
+      this.elements.screenDisconnected.style.display = 'none';
+      return;
+    }
+
     // 1. Sync Offline Banner
     if (this.elements.offlineBanner) {
       this.elements.offlineBanner.style.display = this.session.isOffline ? 'block' : 'none';

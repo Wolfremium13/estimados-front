@@ -18,6 +18,7 @@ export class RoomSession {
   public pendingRequests: PendingRequestModel[] = [];
   public selectedCard: string | null = null;
   public isOffline: boolean = false;
+  public isRedirecting: boolean = false;
 
   private apiService: RoomApiService;
   private signalRService: RoomSignalRService;
@@ -58,13 +59,20 @@ export class RoomSession {
     this.listeners.forEach((listener) => listener());
   }
 
+  public redirect(targetUrl: string): void {
+    if (this.isRedirecting) return;
+    this.isRedirecting = true;
+    this.notify();
+    window.location.href = targetUrl;
+  }
+
   public async start(): Promise<void> {
     this.startHealthCheckTimer();
 
     try {
       const res = await this.apiService.fetchParticipants(this.roomId);
       if (res === 'memory_reset') {
-        window.location.href = '/?error=memory_reset';
+        this.redirect('/?error=memory_reset');
         return;
       }
       if (Array.isArray(res)) {
@@ -110,9 +118,10 @@ export class RoomSession {
           await this.rejoinHubChannels();
         },
         onClose: () => {
+          if (this.isRedirecting) return;
           this.checkBackendOffline();
           if (this.isModerator()) {
-            window.location.href = '/?error=Session closed or connection lost';
+            this.redirect('/?error=Session closed or connection lost');
           } else {
             this.connectionState = 'Disconnected';
             this.notify();
@@ -192,17 +201,26 @@ export class RoomSession {
       } else {
         await this.signalRService.joinRoomAsParticipantWithName(this.roomId, this.participantName);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Rejoining hub channels failed:', err);
+      if (this.isModerator()) {
+        const errorMsg = err?.message || String(err);
+        if (errorMsg.includes('A moderator is already connected to this room')) {
+          this.redirect(`/?error=${encodeURIComponent('A moderator is already connected to this room')}`);
+        } else {
+          this.redirect(`/?error=${encodeURIComponent(errorMsg)}`);
+        }
+      }
     }
   }
 
   private setOffline(offline: boolean): void {
+    if (this.isRedirecting) return;
     if (this.isOffline !== offline) {
       this.isOffline = offline;
       this.notify();
       if (offline) {
-        window.location.href = '/?error=Connection to backend was lost';
+        this.redirect('/?error=Connection to backend was lost');
         return;
       }
       if (!offline && this.connectionState === 'Connected') {
@@ -242,7 +260,7 @@ export class RoomSession {
     try {
       const session = await this.apiService.fetchSession(this.roomId);
       if (session === 'memory_reset') {
-        window.location.href = '/?error=memory_reset';
+        this.redirect('/?error=memory_reset');
         return;
       }
       if (session === null) {
@@ -268,7 +286,7 @@ export class RoomSession {
     try {
       const participants = await this.apiService.fetchParticipants(this.roomId);
       if (participants === 'memory_reset') {
-        window.location.href = '/?error=memory_reset';
+        this.redirect('/?error=memory_reset');
         return;
       }
       if (Array.isArray(participants)) {
@@ -297,7 +315,7 @@ export class RoomSession {
     try {
       const requests = await this.apiService.fetchPendingRequests(this.roomId);
       if (requests === 'memory_reset') {
-        window.location.href = '/?error=memory_reset';
+        this.redirect('/?error=memory_reset');
         return;
       }
       if (Array.isArray(requests)) {
