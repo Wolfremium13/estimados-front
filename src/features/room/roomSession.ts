@@ -205,6 +205,13 @@ export class RoomSession {
       console.error('Rejoining hub channels failed:', err);
       if (this.connectionState === 'Connected') {
         const errorMsg = err?.message || String(err);
+        if (this.requestId) {
+          try {
+            await this.apiService.rejectRequest(this.roomId, this.requestId);
+          } catch (rejectErr) {
+            console.error('Failed to reject duplicate request:', rejectErr);
+          }
+        }
         if (this.isModerator() && errorMsg.includes('A moderator is already connected to this room')) {
           this.redirect(`/?error=${encodeURIComponent('A moderator is already connected to this room')}`);
         } else {

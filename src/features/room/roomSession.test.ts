@@ -171,6 +171,7 @@ describe('RoomSession Coordinator', () => {
     await session.start();
 
     expect(session.isRedirecting).toBe(true);
+    expect(mockRejectRequest).toHaveBeenCalledWith(roomId, 'req-123');
     expect(window.location.href).toBe(`/?error=${encodeURIComponent('A participant with this name is already in the room')}`);
   });
 
