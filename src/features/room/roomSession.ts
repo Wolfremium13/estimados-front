@@ -203,13 +203,11 @@ export class RoomSession {
       }
     } catch (err: any) {
       console.error('Rejoining hub channels failed:', err);
-      if (this.isModerator()) {
-        const errorMsg = err?.message || String(err);
-        if (errorMsg.includes('A moderator is already connected to this room')) {
-          this.redirect(`/?error=${encodeURIComponent('A moderator is already connected to this room')}`);
-        } else {
-          this.redirect(`/?error=${encodeURIComponent(errorMsg)}`);
-        }
+      const errorMsg = err?.message || String(err);
+      if (this.isModerator() && errorMsg.includes('A moderator is already connected to this room')) {
+        this.redirect(`/?error=${encodeURIComponent('A moderator is already connected to this room')}`);
+      } else {
+        this.redirect(`/?error=${encodeURIComponent(errorMsg)}`);
       }
     }
   }

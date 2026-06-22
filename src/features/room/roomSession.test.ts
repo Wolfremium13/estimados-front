@@ -159,4 +159,14 @@ describe('RoomSession Coordinator', () => {
     expect(session.isRedirecting).toBe(true);
     expect(window.location.href).toBe(`/?error=${encodeURIComponent('Some general connection error')}`);
   });
+
+  it('should redirect participant to home page with error message when joinRoomAsParticipantWithName fails', async () => {
+    const session = new RoomSession(apiBaseUrl, roomId, 'Ana', 'Developer', 'req-123');
+    mockJoinRoomAsParticipantWithName.mockRejectedValueOnce(new Error('A participant with this name is already in the room'));
+
+    await session.start();
+
+    expect(session.isRedirecting).toBe(true);
+    expect(window.location.href).toBe(`/?error=${encodeURIComponent('A participant with this name is already in the room')}`);
+  });
 });
