@@ -9,6 +9,7 @@ export interface RoomDomElements {
   screenConnected: HTMLElement;
   roomCodeBadgeText: HTMLElement;
   btnCopyCode: HTMLButtonElement;
+  btnCopyLink?: HTMLButtonElement;
   userStoryDescription: HTMLElement;
   votingStateBadge: HTMLElement;
   moderatorPanel: HTMLElement;
@@ -64,6 +65,23 @@ export class RoomViewController {
         }, 2000);
       } catch (err) {
         console.error('Copy failed:', err);
+      }
+    });
+
+    // 2b. Copy Invite Link Button
+    this.elements.btnCopyLink?.addEventListener('click', async () => {
+      try {
+        const joinUrl = `${window.location.origin}/join/${this.session.roomId}`;
+        await navigator.clipboard.writeText(joinUrl);
+        const originalText = this.elements.btnCopyLink!.innerText;
+        this.elements.btnCopyLink!.innerText = 'Copied!';
+        setTimeout(() => {
+          if (this.elements.btnCopyLink) {
+            this.elements.btnCopyLink.innerText = originalText;
+          }
+        }, 2000);
+      } catch (err) {
+        console.error('Copy link failed:', err);
       }
     });
 

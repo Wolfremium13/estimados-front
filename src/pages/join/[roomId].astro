@@ -1,0 +1,188 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const { roomId } = Astro.params;
+---
+
+<Layout title="Join Estimation Session - es-timados">
+  <!-- General Error Alert -->
+  <div class="row justify-content-center" id="join-alert-row" style="display: none; margin-top: 2rem; margin-bottom: 1rem;">
+    <div class="col-md-6">
+      <div class="alert alert-danger text-center" id="join-alert-box" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 1rem; border-radius: 8px; font-weight: 500;">
+        ⚠️ <span id="join-error-message"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center" style="margin-top: 4rem;">
+    <div class="col-md-6">
+      <div class="glow-card">
+        <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">
+          <span style="color: #e38d8d;">◈</span> Join Active Session
+        </h3>
+        <p style="color: var(--text-gray-muted); font-size: 0.9rem; margin-bottom: 2rem;">
+          You have been invited to join the estimation room: <strong id="room-code-display" style="font-family: var(--font-mono); color: var(--text-white);"></strong>
+        </p>
+
+        <div class="form-group">
+          <label class="form-label" for="participantName">Your Name</label>
+          <input type="text" id="participantName" class="form-control" placeholder="e.g. Ana" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="participantRole">Role</label>
+          <select id="participantRole" class="form-select">
+            <option value="Developer">Developer (Voter)</option>
+            <option value="Product Owner">Product Owner (Observer)</option>
+          </select>
+        </div>
+
+        <div id="join-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 1.5rem; display: none;"></div>
+
+        <button class="btn-outline-premium w-100" id="btn-join-room">
+          <span id="btn-join-text">Join Room</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ roomId }}>
+  // Pass roomId to the client script context
+  window.ROOM_ID = roomId;
+</script>
+
+<script>
+  import { RoomApiService } from '../../features/room/services/roomApiService';
+
+  const API_BASE_URL = import.meta.env.PUBLIC_API_URL || (import.meta.env.PROD ? 'https://es-timados-production-api.azurewebsites.net' : 'http://localhost:5011');
+  const roomId = (window as any).ROOM_ID;
+
+  // UI elements
+  const offlineBanner = document.getElementById('offline-banner') as HTMLDivElement;
+  const alertRow = document.getElementById('join-alert-row') as HTMLDivElement;
+  const alertErrorSpan = document.getElementById('join-error-message') as HTMLSpanElement;
+
+  const roomCodeDisplay = document.getElementById('room-code-display') as HTMLElement;
+  const partNameInput = document.getElementById('participantName') as HTMLInputElement;
+  const partRoleSelect = document.getElementById('participantRole') as HTMLSelectElement;
+  const btnJoinRoom = document.getElementById('btn-join-room') as HTMLButtonElement;
+  const btnJoinText = document.getElementById('btn-join-text') as HTMLSpanElement;
+  const joinErrorDiv = document.getElementById('join-error') as HTMLDivElement;
+
+  if (roomCodeDisplay && roomId) {
+    roomCodeDisplay.innerText = roomId;
+  }
+
+  let isOffline = false;
+  let failedAttempts = 0;
+  let checkIntervalId: any = null;
+
+  // Set offline status
+  function setOffline(offline: boolean) {
+    if (isOffline !== offline) {
+      isOffline = offline;
+      if (offline) {
+        if (offlineBanner) offlineBanner.style.display = 'block';
+        btnJoinRoom.disabled = true;
+      } else {
+        if (offlineBanner) {
+          offlineBanner.style.display = 'none';
+          const bannerText = offlineBanner.querySelector('.banner-text') as HTMLSpanElement;
+          if (bannerText) bannerText.innerText = 'You are currently offline. Checking connection to the backend...';
+          const bannerIcon = offlineBanner.querySelector('.banner-icon') as HTMLSpanElement;
+          if (bannerIcon) bannerIcon.innerText = '🔌';
+        }
+        btnJoinRoom.disabled = false;
+        failedAttempts = 0;
+      }
+    }
+  }
+
+  // Initialize RoomApiService
+  const apiService = new RoomApiService(API_BASE_URL, (offline) => setOffline(offline));
+
+  // Ping backend to check health
+  async function checkBackendOffline() {
+    try {
+      const isHealthy = await apiService.checkHealth();
+      if (!isHealthy) {
+        handleOfflineFailure();
+      }
+    } catch (err: any) {
+      handleOfflineFailure();
+    }
+  }
+
+  function handleOfflineFailure() {
+    failedAttempts++;
+    setOffline(true);
+    if (failedAttempts >= 10) {
+      if (checkIntervalId) {
+        clearInterval(checkIntervalId);
+        checkIntervalId = null;
+      }
+      if (offlineBanner) {
+        const bannerText = offlineBanner.querySelector('.banner-text') as HTMLSpanElement;
+        if (bannerText) {
+          bannerText.innerText = 'Connection to the backend failed. Please try again later and refresh the page.';
+        }
+        const bannerIcon = offlineBanner.querySelector('.banner-icon') as HTMLSpanElement;
+        if (bannerIcon) {
+          bannerIcon.innerText = '⚠️';
+        }
+      }
+    }
+  }
+
+  // Start checking offline status
+  checkBackendOffline();
+  checkIntervalId = setInterval(checkBackendOffline, 5000);
+
+  // Validate room code UUID format
+  if (!roomId || !/^[0-9a-fA-F-]{36}$/.test(roomId)) {
+    showError(joinErrorDiv, 'Invalid Room Code URL.');
+    btnJoinRoom.disabled = true;
+  }
+
+  // Join Room action
+  btnJoinRoom.addEventListener('click', async () => {
+    const name = partNameInput.value.trim();
+    const role = partRoleSelect.value;
+
+    if (!name) {
+      showError(joinErrorDiv, 'Name is required.');
+      return;
+    }
+    clearError(joinErrorDiv);
+
+    try {
+      btnJoinRoom.disabled = true;
+      btnJoinText.innerText = 'Sending Join Request...';
+
+      const data = await apiService.joinRoom(roomId, name, role);
+
+      if (data) {
+        window.location.href = `/room/${roomId}?name=${encodeURIComponent(name)}&role=${role}&requestId=${data.requestId}`;
+      } else {
+        showError(joinErrorDiv, 'Failed to join. The room might be closed or does not exist.');
+      }
+    } catch (err) {
+      showError(joinErrorDiv, 'Error connecting to server.');
+      setOffline(true);
+    } finally {
+      btnJoinRoom.disabled = false;
+      btnJoinText.innerText = 'Join Room';
+    }
+  });
+
+  function showError(element: HTMLDivElement, message: string) {
+    element.innerText = `⚠️ ${message}`;
+    element.style.display = 'block';
+  }
+
+  function clearError(element: HTMLDivElement) {
+    element.innerText = '';
+    element.style.display = 'none';
+  }
+</script>

@@ -75,6 +75,9 @@ const { roomId } = Astro.params;
               <button id="btn-copy-code" style="background: rgba(93, 82, 75, 0.05); border: 1px solid rgba(93, 82, 75, 0.1); color: var(--text-white); cursor: pointer; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-family: var(--font-mono); margin-left: 4px; transition: var(--transition-smooth);" title="Copy Full Room Code">
                 Copy Code
               </button>
+              <button id="btn-copy-link" style="background: rgba(93, 82, 75, 0.05); border: 1px solid rgba(93, 82, 75, 0.1); color: var(--text-white); cursor: pointer; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-family: var(--font-mono); margin-left: 4px; transition: var(--transition-smooth);" title="Copy Invite Link">
+                Copy Link
+              </button>
             </span>
             <div id="user-story-description" class="user-story-description" style="margin-top: 0.5rem; margin-bottom: 0; font-size: 1.1rem; line-height: 1.6; color: var(--text-gray-light);">
               <h2 style="margin: 0; font-size: 1.5rem;">Waiting for story...</h2>
@@ -161,7 +164,7 @@ const { roomId } = Astro.params;
   const requestId = params.get('requestId') || null;
 
   if (!name || !role) {
-    window.location.href = `/?roomCode=${roomId}`;
+    window.location.href = `/join/${roomId}`;
   }
 
   // Setup DOM Elements references
@@ -173,6 +176,7 @@ const { roomId } = Astro.params;
     screenConnected: document.getElementById('screen-connected') as HTMLDivElement,
     roomCodeBadgeText: document.getElementById('room-code-badge-text') as HTMLSpanElement,
     btnCopyCode: document.getElementById('btn-copy-code') as HTMLButtonElement,
+    btnCopyLink: document.getElementById('btn-copy-link') as HTMLButtonElement,
     userStoryDescription: document.getElementById('user-story-description') as HTMLDivElement,
     votingStateBadge: document.getElementById('voting-state-badge') as HTMLSpanElement,
     moderatorPanel: document.getElementById('moderator-panel') as HTMLDivElement,
