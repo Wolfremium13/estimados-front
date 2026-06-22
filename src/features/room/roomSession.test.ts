@@ -160,13 +160,30 @@ describe('RoomSession Coordinator', () => {
     expect(window.location.href).toBe(`/?error=${encodeURIComponent('Some general connection error')}`);
   });
 
-  it('should redirect participant to home page with error message when joinRoomAsParticipantWithName fails', async () => {
+  it('should redirect participant to home page with error message when joinRoomAsParticipantWithName fails and participant is approved', async () => {
     const session = new RoomSession(apiBaseUrl, roomId, 'Ana', 'Developer', 'req-123');
+    mockFetchParticipants.mockResolvedValueOnce([
+      { name: 'Carlos', role: 'Moderator' },
+      { name: 'Ana', role: 'Developer' }
+    ]);
     mockJoinRoomAsParticipantWithName.mockRejectedValueOnce(new Error('A participant with this name is already in the room'));
 
     await session.start();
 
     expect(session.isRedirecting).toBe(true);
     expect(window.location.href).toBe(`/?error=${encodeURIComponent('A participant with this name is already in the room')}`);
+  });
+
+  it('should not redirect participant when joinRoomAsParticipantWithName fails and participant is not approved yet', async () => {
+    const session = new RoomSession(apiBaseUrl, roomId, 'Ana', 'Developer', 'req-123');
+    mockFetchParticipants.mockResolvedValueOnce([
+      { name: 'Carlos', role: 'Moderator' }
+    ]);
+    mockJoinRoomAsParticipantWithName.mockRejectedValueOnce(new Error('A participant with this name is not approved yet'));
+
+    await session.start();
+
+    expect(session.isRedirecting).toBe(false);
+    expect(session.connectionState).toBe('WaitingForApproval');
   });
 });
