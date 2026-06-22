@@ -163,7 +163,7 @@ const { roomId } = Astro.params;
   const role = params.get('role') || '';
   const requestId = params.get('requestId') || null;
 
-  if (!name || !role) {
+  if (!name || !role || (role !== 'Moderator' && !requestId)) {
     window.location.href = `/join/${roomId}`;
   }
 

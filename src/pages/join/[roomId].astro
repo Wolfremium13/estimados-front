@@ -158,6 +158,18 @@ const { roomId } = Astro.params;
 
     try {
       btnJoinRoom.disabled = true;
+      btnJoinText.innerText = 'Checking room status...';
+
+      const participants = await apiService.fetchParticipants(roomId);
+      if (participants === 'memory_reset') {
+        showError(joinErrorDiv, 'The room no longer exists.');
+        return;
+      }
+      if (Array.isArray(participants) && participants.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+        showError(joinErrorDiv, 'A participant with this name is already in the room.');
+        return;
+      }
+
       btnJoinText.innerText = 'Sending Join Request...';
 
       const data = await apiService.joinRoom(roomId, name, role);
